@@ -1,9 +1,15 @@
+use std::process;
+
 use clap::Parser;
 
-use fincli::{run, Args};
+use fincli::{run, Cli};
 
 fn main() {
-    let args = Args::parse();
+    let args = Cli::parse();
     dbg!(&args);
-    run(args);
+
+    if let Err(error) = run(args) {
+        println!("{}", error);
+        process::exit(1);
+    }
 }

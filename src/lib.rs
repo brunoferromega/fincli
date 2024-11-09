@@ -1,5 +1,17 @@
+use std::{error::Error, fs::File, io};
+
 use chrono::{DateTime, Utc};
 use clap::{command, Parser};
+use serde::Serialize;
+
+#[derive(Parser, Debug)]
+#[command(version = "1.0", about = "Financial cli app for register transactions", long_about = None)]
+pub struct Cli {
+    #[arg(short, long)]
+    name: String,
+    #[arg(short, long)]
+    amount: f32,
+}
 
 #[allow(dead_code)]
 #[derive(Debug)]
@@ -19,27 +31,51 @@ impl Transaction {
         }
     }
 
-    fn from(args: Args) -> Self {
+    fn from(cli: Cli) -> Self {
         Self {
-            name: args.name,
-            amount: args.amount,
+            name: cli.name,
+            amount: cli.amount,
             date_time: Utc::now(),
         }
     }
 }
 
-#[derive(Parser, Debug)]
-#[command(version = "1.0", about = "Financial cli app for register transactions", long_about = None)]
-pub struct Args {
-    #[arg(short, long)]
+#[allow(dead_code)]
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "PascalCase")]
+struct TRecord {
     name: String,
-    #[arg(short, long)]
     amount: f32,
+    date_time: String,
 }
 
-pub fn run(args: Args) {
-    let transaction = Transaction::from(args);
-    println!("{:#?}", transaction);
+impl TRecord {
+    fn from(transaction: Transaction) -> Self {
+        Self {
+            name: transaction.name,
+            amount: transaction.amount,
+            date_time: format!("{}", transaction.date_time.format("%d/%m/%Y %H:%M")),
+        }
+    }
+}
 
-    todo!("Format date (remove ms) AND save in a CSV file");
+pub fn run(args: Cli) -> Result<(), Box<dyn Error>> {
+    let transaction = Transaction::from(args);
+    let data_trecord = TRecord::from(transaction);
+
+    dbg!(&data_trecord);
+
+    let file = File::open("db.csv")?;
+    let mut reader = csv::Reader::from_reader(file);
+
+    reader
+        .records()
+        .for_each(|record| println!("{:?}", record.unwrap()));
+
+    let mut writer = csv::Writer::from_path("db.csv")?;
+
+    writer.serialize(data_trecord)?;
+    writer.flush()?;
+
+    todo!("FEAT -> read file and append content to him");
 }
