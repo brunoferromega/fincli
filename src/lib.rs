@@ -1,8 +1,8 @@
-use std::{error::Error, fs::File, io};
+use std::{error::Error, fs::File};
 
 use chrono::{DateTime, Utc};
 use clap::{command, Parser};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Parser, Debug)]
 #[command(version = "1.0", about = "Financial cli app for register transactions", long_about = None)]
@@ -41,7 +41,7 @@ impl Transaction {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 struct TRecord {
     name: String,
@@ -65,17 +65,30 @@ pub fn run(args: Cli) -> Result<(), Box<dyn Error>> {
 
     dbg!(&data_trecord);
 
+    let t_records: Vec<TRecord> = append_data(data_trecord)?;
+
+    write_csv(t_records)?;
+
+    todo!("FEAT -> implement negavite valeu or add type column");
+}
+
+fn append_data(data_record: TRecord) -> Result<Vec<TRecord>, Box<dyn Error>> {
     let file = File::open("db.csv")?;
-    let mut reader = csv::Reader::from_reader(file);
+    let reader = csv::Reader::from_reader(file);
 
-    reader
-        .records()
-        .for_each(|record| println!("{:?}", record.unwrap()));
+    let mut records: Vec<TRecord> = reader.into_deserialize().map(|r| r.unwrap()).collect();
+    records.push(data_record);
 
+    Ok(records)
+}
+
+fn write_csv(records: Vec<TRecord>) -> Result<(), Box<dyn Error>> {
     let mut writer = csv::Writer::from_path("db.csv")?;
 
-    writer.serialize(data_trecord)?;
-    writer.flush()?;
+    records
+        .into_iter()
+        .for_each(|record: TRecord| writer.serialize(record).unwrap());
 
-    todo!("FEAT -> read file and append content to him");
+    writer.flush()?;
+    Ok(())
 }
