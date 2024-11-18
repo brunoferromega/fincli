@@ -1,8 +1,7 @@
 use std::process;
 
 use clap::Parser;
-
-use fincli::{run, Cli};
+use fincli::{domain::cli::Cli, run};
 
 fn main() {
     let args = Cli::parse();
