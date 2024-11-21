@@ -10,6 +10,7 @@ pub struct Transaction {
     title: String,
     amount: f32,
     date_time: DateTime<Utc>,
+    description: String,
 }
 
 #[allow(dead_code)]
@@ -19,6 +20,7 @@ impl Transaction {
             title: String::from(name),
             amount,
             date_time: Utc::now(),
+            description: "".to_string(),
         }
     }
 
@@ -27,16 +29,18 @@ impl Transaction {
 impl From<Cli> for Transaction {
     fn from(cli: Cli) -> Self {
         match cli.commands {
-            Commands::Deposit { amount, title, .. } => Self {
+            Commands::Deposit { amount, title, description } => Self {
                 title,
                 amount,
                 date_time: Utc::now(),
+                description: if let Some(desc) = description { desc } else { "".to_string() },
             },
 
-            Commands::Withdraw { amount, title, .. } => Self {
+            Commands::Withdraw { amount, title, description } => Self {
                 title,
                 amount,
                 date_time: Utc::now(),
+                description: if let Some(desc) = description { desc } else { "".to_string() },
             },
         }
     }
@@ -49,6 +53,7 @@ pub struct TRecord {
     name: String,
     amount: f32,
     date_time: String,
+    description: Option<String>,
 }
 
 impl From<Transaction> for TRecord {
@@ -57,6 +62,7 @@ impl From<Transaction> for TRecord {
             name: transaction.title,
             amount: transaction.amount,
             date_time: format!("{}", transaction.date_time.format("%d/%m/%Y %H:%M")),
+            description: Some(transaction.description),
         }
     }
 }

@@ -1,12 +1,11 @@
 use std::{error::Error, fs::File};
 
 use domain::transaction::{TRecord, Transaction};
-
-use crate::domain::cli;
+use domain::cli::Cli;
 
 pub mod domain;
 
-pub fn run(cli: cli::Cli) -> Result<(), Box<dyn Error>> {
+pub fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
     let transaction = Transaction::from(cli);
 
     let data_trecord = TRecord::from(transaction);
@@ -17,11 +16,15 @@ pub fn run(cli: cli::Cli) -> Result<(), Box<dyn Error>> {
 
     write_csv(t_records)?;
 
-    todo!("FEAT -> Inprove description row AND turn on flex receive integer or float");
+    todo!("FEAT -> Implement backend communication");
 }
 
 fn append_data(data_record: TRecord) -> Result<Vec<TRecord>, Box<dyn Error>> {
-    let file = File::open("db.csv")?;
+    let file = match File::open("db.csv") {
+        Ok(file) => file,
+        Err(_) => File::create("db.csv")?,
+    };
+
     let reader = csv::Reader::from_reader(file);
 
     let mut records: Vec<TRecord> = reader.into_deserialize().map(|r| r.unwrap()).collect();
