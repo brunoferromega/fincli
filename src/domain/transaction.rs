@@ -42,12 +42,14 @@ impl From<Cli> for Transaction {
                 date_time: Utc::now(),
                 description: if let Some(desc) = description { desc } else { "".to_string() },
             },
+
+            Commands::Submit => Self::new("INVALID", 0.0),
         }
     }
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 pub struct TRecord {
     name: String,

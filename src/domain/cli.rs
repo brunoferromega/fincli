@@ -26,4 +26,6 @@ pub enum Commands {
         #[arg(long, short)]
         description: Option<String>,
     },
+
+    Submit,
 }
