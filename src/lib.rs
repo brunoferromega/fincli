@@ -1,21 +1,50 @@
-use std::{error::Error, fs::File};
+use std::{error::Error, fs::File, io::Write};
 
-use domain::cli::Cli;
+use domain::cli::{Cli, Commands};
 use domain::transaction::{TRecord, Transaction};
+use reqwest::header;
 
 pub mod domain;
 
 pub fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
-    let transaction = Transaction::from(cli);
+    match &cli.commands {
+        Commands::Submit => {
+            let (records, mut csv_file) = file_to_record()?;
 
-    let data_record = TRecord::from(transaction);
-    dbg!(&data_record);
+            for record in records.into_iter() {
+                let _ = submit_data(record);
+            }
 
-    let t_records: Vec<TRecord> = append_data(data_record)?;
+            let _ = csv_file.write_all(b"");
 
-    write_csv(t_records)?;
+            Ok(())
+        }
+        _ => {
+            let transaction = Transaction::from(cli);
 
-    Ok(())
+            let data_record = TRecord::from(transaction);
+            dbg!(&data_record);
+
+            let t_records: Vec<TRecord> = append_data(data_record)?;
+
+            write_csv(t_records)?;
+            Ok(())
+        }
+    }
+}
+
+fn file_to_record() -> Result<(Vec<TRecord>, File), Box<dyn Error>> {
+    let csv_file = match File::open("db.csv") {
+        Ok(f) => f,
+        Err(_) => File::create("db.csv")?,
+    };
+
+    let records = csv::Reader::from_reader(&csv_file)
+        .into_deserialize()
+        .map(|record| record.unwrap())
+        .collect::<Vec<TRecord>>();
+
+    Ok((records, csv_file))
 }
 
 fn append_data(data_record: TRecord) -> Result<Vec<TRecord>, Box<dyn Error>> {
@@ -25,7 +54,6 @@ fn append_data(data_record: TRecord) -> Result<Vec<TRecord>, Box<dyn Error>> {
     };
 
     let reader = csv::Reader::from_reader(file);
-
     let mut records: Vec<TRecord> = reader.into_deserialize().map(|r| r.unwrap()).collect();
     records.push(data_record);
 
@@ -45,20 +73,34 @@ fn write_csv(records: Vec<TRecord>) -> Result<(), Box<dyn Error>> {
 
 #[allow(dead_code)]
 fn submit_data(record: TRecord) -> Result<(), Box<dyn Error>> {
-    let response = reqwest::blocking::get("http://127.0.0.1:8080/")?;
+    let mut headers = header::HeaderMap::new();
+    headers.insert(
+        header::CONTENT_TYPE,
+        header::HeaderValue::from_static("application/json"),
+    );
+
+    dbg!(serde_json::to_string(&record).unwrap());
+
+    let json_payload = serde_json::json!({
+        "title": "testing",
+        "amount": 0.0,
+        "date_time": "26/11/24 11:30",
+        "description": "",
+    });
 
     let client = reqwest::blocking::Client::new();
-    let req_builder = client.post("http://127.0.0.1:8080/transactions");
+    let req_builder = client
+        .post("http://localhost:8080/transactions")
+        .headers(headers)
+        .body(serde_json::to_string(&json_payload).unwrap());
 
-    if response.status().is_success() {
-        let post_resp = req_builder.json(&record).send()?;
+    dbg!(&req_builder);
 
-        let transc = post_resp.json::<TRecord>()?;
-        dbg!(transc);
-    }
+    let response = req_builder.send()?;
+    dbg!(&response);
 
-    let msg = response.text()?;
-    println!("Is alive: {}", msg);
+    let transc = response.json::<TRecord>()?;
+    dbg!(transc);
 
-    Ok(())
+    todo!("FIX -> field serialization");
 }
