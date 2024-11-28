@@ -1,4 +1,4 @@
-use std::{error::Error, fs::File, io::Write};
+use std::{error::Error, fs::File};
 
 use domain::cli::{Cli, Commands};
 use domain::transaction::{TRecord, Transaction};
@@ -9,16 +9,17 @@ pub mod domain;
 pub fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
     match &cli.commands {
         Commands::Submit => {
-            let (records, mut csv_file) = file_to_record()?;
+            let (records, _csv_file) = file_to_record()?;
 
             for record in records.into_iter() {
                 let _ = submit_data(record);
             }
 
-            let _ = csv_file.write_all(b"");
-
             Ok(())
         }
+
+        Commands::Clean => clean_file(),
+
         _ => {
             let transaction = Transaction::from(cli);
 
@@ -71,7 +72,6 @@ fn write_csv(records: Vec<TRecord>) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-#[allow(dead_code)]
 fn submit_data(record: TRecord) -> Result<(), Box<dyn Error>> {
     let mut headers = header::HeaderMap::new();
     headers.insert(
@@ -79,28 +79,22 @@ fn submit_data(record: TRecord) -> Result<(), Box<dyn Error>> {
         header::HeaderValue::from_static("application/json"),
     );
 
-    dbg!(serde_json::to_string(&record).unwrap());
-
-    let json_payload = serde_json::json!({
-        "title": "testing",
-        "amount": 0.0,
-        "date_time": "26/11/24 11:30",
-        "description": "",
-    });
-
     let client = reqwest::blocking::Client::new();
     let req_builder = client
         .post("http://localhost:8080/transactions")
         .headers(headers)
-        .body(serde_json::to_string(&json_payload).unwrap());
-
-    dbg!(&req_builder);
+        .json(&record);
 
     let response = req_builder.send()?;
-    dbg!(&response);
 
     let transc = response.json::<TRecord>()?;
     dbg!(transc);
 
-    todo!("FIX -> field serialization");
+    Ok(())
+}
+
+#[allow(dead_code)]
+fn clean_file() -> Result<(), Box<dyn Error>> {
+    let _ = File::create("db.csv");
+    Ok(())
 }

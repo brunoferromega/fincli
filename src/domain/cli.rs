@@ -28,4 +28,5 @@ pub enum Commands {
     },
 
     Submit,
+    Clean,
 }

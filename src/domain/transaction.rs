@@ -43,14 +43,14 @@ impl From<Cli> for Transaction {
                 description: if let Some(desc) = description { desc } else { "".to_string() },
             },
 
-            Commands::Submit => Self::new("INVALID", 0.0),
+            _ => Self::new("INVALID", 0.0),
         }
     }
 }
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "PascalCase")]
+#[serde(rename_all = "snake_case")]
 pub struct TRecord {
     title: String,
     amount: f32,

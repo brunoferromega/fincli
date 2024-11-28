@@ -11,5 +11,7 @@ fn main() {
         println!("{}", error);
         process::exit(1);
     }
+
+    todo!("REFACTOR -> improve code readbility"); 
 }
 
